@@ -1,9 +1,7 @@
 import { Env } from './types';
-import { NotificationsHub } from './durable/notifications-hub';
 import { handleRequest } from './router';
 import { StorageService } from './services/storage';
 import { applyCors, jsonResponse } from './utils/response';
-import { runScheduledBackupIfDue } from './handlers/backup';
 
 let dbInitialized = false;
 let dbInitError: string | null = null;
@@ -82,48 +80,41 @@ async function ensureDatabaseInitialized(env: Env): Promise<void> {
   await dbInitPromise;
 }
 
-export default {
-  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
-    void ctx;
-    const normalizedRequest = normalizeRequestUrl(request);
-    const assetResponse = await maybeServeAsset(normalizedRequest, env);
-    if (assetResponse) {
-      return applyCors(normalizedRequest, assetResponse);
-    }
+export async function fetchHandler(request: Request, env: Env): Promise<Response> {
+  const normalizedRequest = normalizeRequestUrl(request);
+  const assetResponse = await maybeServeAsset(normalizedRequest, env);
+  if (assetResponse) {
+    return applyCors(normalizedRequest, assetResponse);
+  }
 
-    await ensureDatabaseInitialized(env);
-    if (dbInitError) {
-      // Log full error server-side, return generic message to client.
-      console.error('DB init error (not forwarded to client):', dbInitError);
-      const resp = jsonResponse(
-        {
-          error: 'Database not initialized',
-          error_description: 'Database initialization failed. Check server logs for details.',
-          ErrorModel: {
-            Message: 'Service temporarily unavailable',
-            Object: 'error',
-          },
+  await ensureDatabaseInitialized(env);
+  if (dbInitError) {
+    // Log full error server-side, return generic message to client.
+    console.error('DB init error (not forwarded to client):', dbInitError);
+    const resp = jsonResponse(
+      {
+        error: 'Database not initialized',
+        error_description: 'Database initialization failed. Check server logs for details.',
+        ErrorModel: {
+          Message: 'Service temporarily unavailable',
+          Object: 'error',
         },
-        500
-      );
-      return applyCors(normalizedRequest, resp);
-    }
-
-    const resp = await handleRequest(normalizedRequest, env);
+      },
+      500
+    );
     return applyCors(normalizedRequest, resp);
-  },
+  }
 
-  async scheduled(controller: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
-    void controller;
-    await ensureDatabaseInitialized(env);
-    if (dbInitError) {
-      console.error('Skipping scheduled backup because DB init failed:', dbInitError);
-      return;
-    }
-    ctx.waitUntil(runScheduledBackupIfDue(env).catch((error) => {
-      console.error('Scheduled backup failed:', error);
-    }));
-  },
-};
+  const resp = await handleRequest(normalizedRequest, env);
+  return applyCors(normalizedRequest, resp);
+}
 
-export { NotificationsHub };
+export async function scheduledHandler(env: Env): Promise<void> {
+  await ensureDatabaseInitialized(env);
+  if (dbInitError) {
+    console.error('Skipping scheduled backup because DB init failed:', dbInitError);
+    return;
+  }
+  const { runScheduledBackupIfDue } = await import('./handlers/backup');
+  await runScheduledBackupIfDue(env);
+}
