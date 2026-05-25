@@ -1,5 +1,5 @@
 import { User, Cipher, Folder, Attachment, Device, Invite, AuditLog, Send, TrustedDeviceTokenSummary, RefreshTokenRecord, CustomEquivalentDomain } from '../types';
-import type { ESADatabase } from '../esa/types';
+import type { ESADatabase, ESAPreparedStatement } from '../esa/types';
 import { LIMITS } from '../config/limits';
 import { ensureStorageSchema } from './storage-schema';
 import {
@@ -150,7 +150,7 @@ export class StorageService {
    * error - especially important after the opaque-passthrough change where
    * client-supplied JSON may omit fields we later reference as columns.
    */
-  private safeBind(stmt: D1PreparedStatement, ...values: any[]): D1PreparedStatement {
+  private safeBind(stmt: ESAPreparedStatement, ...values: any[]): ESAPreparedStatement {
     return stmt.bind(...values.map(v => v === undefined ? null : v));
   }
 
