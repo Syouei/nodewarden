@@ -1,0 +1,74 @@
+# ESA Deployment Configuration for NodeWarden
+# This file replaces wrangler.toml for Alibaba Cloud Edge Serverless App deployment
+
+edition: 3  # ESA Functions edition
+
+vars:
+  ESA_EDITION: "3"
+
+functions:
+  nodewarden:
+    handler: src/index.handler
+    runtime: nodejs18
+    timeout: 30
+    memory: 512
+
+    # HTTP trigger - main entry point
+    triggers:
+      - type: http
+        path: /*
+        methods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - PATCH
+          - OPTIONS
+
+      # Cron trigger - scheduled task (equivalent to wrangler crons)
+      - type: timer
+        cron: "*/5 * * * *"
+        handler: src/index.scheduledHandler
+        enabled: true
+
+    # Environment variables (secrets managed separately via ESA console or CLI)
+    env:
+      - name: NODE_ENV
+        value: production
+
+    # SQLite database binding (ESA D1 equivalent)
+    databases:
+      - name: nodewarden-db
+        binding: DB
+        type: sqlite
+
+    # Durable Objects binding
+    durableObjects:
+      - name: NOTIFICATIONS_HUB
+        className: NotificationsHub
+
+    # Object storage binding (ESA OSS equivalent to R2)
+    oss:
+      - name: nodewarden-attachments
+        binding: ATTACHMENTS
+
+    # Key-value store bindings (ESA KV equivalent)
+    kv:
+      - name: notifications-hub-kv
+        binding: NOTIFICATIONS_HUB
+      - name: attachments-cache
+        binding: ATTACHMENTS_KV
+
+# Static assets configuration
+assets:
+  nodewarden-assets:
+    root: ./dist
+    binding: ASSETS
+    notFoundHandling: single-page-application
+    runWorkerFirst: false
+    cors: true
+
+# Global environment variables shared across all functions
+# Secrets should be set via ESA console or esa env CLI
+globalEnv:
+  ESA_EDITION: "3"

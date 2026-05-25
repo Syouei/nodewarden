@@ -1,5 +1,16 @@
+# Environment Variables for NodeWarden ESA Deployment
+# Copy this file to .dev.vars for local development
+# IMPORTANT: Change all secret values before any real deployment.
+
 # JWT Secret for signing tokens (required)
-# IMPORTANT: change this value before any real deployment.
 # Generate one with: openssl rand -hex 32
-# (Example only, 64 hex chars = 32 bytes)
 JWT_SECRET=Enter-your-JWT-key-here-at-least-32-characters
+
+# Database (ESA/D1) binding is configured via esa.yml, no env var needed
+
+# OSS/R2 bucket is configured via esa.yml, no env var needed
+
+# KV store bindings are configured via esa.yml, no env var needed
+
+# Optional: Debug logging (set to 'true' for development)
+# DEBUG=false
