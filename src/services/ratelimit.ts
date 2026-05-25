@@ -1,3 +1,4 @@
+import type { ESADatabase } from '../esa/types';
 import { LIMITS } from '../config/limits';
 
 // Rate limiting service.
@@ -18,7 +19,7 @@ export class RateLimitService {
   private static readonly LOGIN_IP_CLEANUP_INTERVAL_MS = LIMITS.rateLimit.loginIpCleanupIntervalMs;
   private static readonly LOGIN_IP_RETENTION_MS = LIMITS.rateLimit.loginIpRetentionMs;
 
-  constructor(private db: D1Database) {}
+  constructor(private db: ESADatabase) {}
 
   private shouldRunCleanup(lastRunAt: number, intervalMs: number): boolean {
     const now = Date.now();
