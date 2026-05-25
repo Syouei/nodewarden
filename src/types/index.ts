@@ -1,14 +1,16 @@
+import type { ESADatabase, ESABucket, ESAKVNamespace } from './esa/types';
+
 // Environment bindings
 export interface Env {
-  DB: D1Database;
-  NOTIFICATIONS_HUB: DurableObjectNamespace;
+  DB: ESADatabase;
+  NOTIFICATIONS_HUB?: ESAKVNamespace;  // Redis-backed, optional for ESA
   ASSETS?: {
     fetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response>;
   };
-  // Prefer R2 when available. Optional to support KV-only deployments.
-  ATTACHMENTS?: R2Bucket;
+  // Prefer OSS when available. Optional to support KV-only deployments.
+  ATTACHMENTS?: ESABucket;
   // Optional fallback for attachment/send file storage (no credit card required).
-  ATTACHMENTS_KV?: KVNamespace;
+  ATTACHMENTS_KV?: ESAKVNamespace;
   JWT_SECRET: string;
 }
 
