@@ -66,10 +66,11 @@ export class KVLikeNamespace {
     }
 
     // Check if this was stored with metadata (JSON envelope)
+    // Only treat as envelope if BOTH 'v' AND 'm' keys exist
     if (type === 'string' && typeof result === 'string') {
       try {
         const parsed = JSON.parse(result);
-        if (parsed && typeof parsed === 'object' && 'v' in parsed) {
+        if (parsed && typeof parsed === 'object' && 'v' in parsed && 'm' in parsed) {
           return parsed.v;
         }
       } catch {
@@ -101,7 +102,7 @@ export class KVLikeNamespace {
     if (type === 'string' && typeof result.value === 'string') {
       try {
         const parsed = JSON.parse(result.value);
-        if (parsed && typeof parsed === 'object' && 'v' in parsed) {
+        if (parsed && typeof parsed === 'object' && 'v' in parsed && 'm' in parsed) {
           return {
             value: parsed.v,
             metadata: parsed.m ?? null,
@@ -112,7 +113,10 @@ export class KVLikeNamespace {
       }
     }
 
-    return { value: result.value, metadata: result.metadata };
+    return {
+      value: result.value,
+      metadata: result.metadata && Object.keys(result.metadata).length > 0 ? result.metadata : null,
+    };
   }
 
   /**
