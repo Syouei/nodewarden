@@ -1,4 +1,5 @@
 import type { Cipher } from '../types';
+import type { ESADatabase, ESAPreparedStatement } from '../esa/types';
 
 function normalizeOptionalId(value: unknown): string | null {
   if (value == null) return null;
@@ -6,7 +7,7 @@ function normalizeOptionalId(value: unknown): string | null {
   return normalized ? normalized : null;
 }
 
-type SafeBind = (stmt: D1PreparedStatement, ...values: any[]) => D1PreparedStatement;
+type SafeBind = (stmt: ESAPreparedStatement, ...values: any[]) => ESAPreparedStatement;
 type SqlChunkSize = (fixedBindCount: number) => number;
 type UpdateRevisionDate = (userId: string) => Promise<string>;
 
@@ -99,7 +100,7 @@ function selectCipherColumns(): string {
   return 'id, user_id, type, folder_id, name, notes, favorite, data, reprompt, key, created_at, updated_at, archived_at, deleted_at';
 }
 
-export async function getCipher(db: D1Database, id: string): Promise<Cipher | null> {
+export async function getCipher(db: ESADatabase, id: string): Promise<Cipher | null> {
   const row = await db
     .prepare(`SELECT ${selectCipherColumns()} FROM ciphers WHERE id = ?`)
     .bind(id)
@@ -107,7 +108,7 @@ export async function getCipher(db: D1Database, id: string): Promise<Cipher | nu
   return parseCipherRow(row);
 }
 
-export async function saveCipher(db: D1Database, safeBind: SafeBind, cipher: Cipher): Promise<void> {
+export async function saveCipher(db: ESADatabase, safeBind: SafeBind, cipher: Cipher): Promise<void> {
   const folderId = normalizeOptionalId(cipher.folderId);
   const data = buildCipherData(cipher, folderId);
   const stmt = db.prepare(
@@ -139,12 +140,12 @@ function sanitizeIds(ids: string[]): string[] {
   return Array.from(new Set(ids.map((id) => String(id || '').trim()).filter(Boolean)));
 }
 
-export async function deleteCipher(db: D1Database, id: string, userId: string): Promise<void> {
+export async function deleteCipher(db: ESADatabase, id: string, userId: string): Promise<void> {
   await db.prepare('DELETE FROM ciphers WHERE id = ? AND user_id = ?').bind(id, userId).run();
 }
 
 export async function bulkSoftDeleteCiphers(
-  db: D1Database,
+  db: ESADatabase,
   sqlChunkSize: SqlChunkSize,
   updateRevisionDate: UpdateRevisionDate,
   ids: string[],
@@ -175,7 +176,7 @@ export async function bulkSoftDeleteCiphers(
 }
 
 export async function bulkRestoreCiphers(
-  db: D1Database,
+  db: ESADatabase,
   sqlChunkSize: SqlChunkSize,
   updateRevisionDate: UpdateRevisionDate,
   ids: string[],
@@ -206,7 +207,7 @@ export async function bulkRestoreCiphers(
 }
 
 export async function bulkDeleteCiphers(
-  db: D1Database,
+  db: ESADatabase,
   sqlChunkSize: SqlChunkSize,
   updateRevisionDate: UpdateRevisionDate,
   ids: string[],
@@ -226,7 +227,7 @@ export async function bulkDeleteCiphers(
   return updateRevisionDate(userId);
 }
 
-export async function getAllCiphers(db: D1Database, userId: string): Promise<Cipher[]> {
+export async function getAllCiphers(db: ESADatabase, userId: string): Promise<Cipher[]> {
   const res = await db
     .prepare(`SELECT ${selectCipherColumns()} FROM ciphers WHERE user_id = ? ORDER BY updated_at DESC`)
     .bind(userId)
@@ -238,7 +239,7 @@ export async function getAllCiphers(db: D1Database, userId: string): Promise<Cip
 }
 
 export async function getCiphersPage(
-  db: D1Database,
+  db: ESADatabase,
   userId: string,
   includeDeleted: boolean,
   limit: number,
@@ -262,7 +263,7 @@ export async function getCiphersPage(
 }
 
 export async function getCiphersByIds(
-  db: D1Database,
+  db: ESADatabase,
   sqlChunkSize: SqlChunkSize,
   ids: string[],
   userId: string
@@ -289,7 +290,7 @@ export async function getCiphersByIds(
 }
 
 export async function bulkMoveCiphers(
-  db: D1Database,
+  db: ESADatabase,
   sqlChunkSize: SqlChunkSize,
   updateRevisionDate: UpdateRevisionDate,
   ids: string[],
@@ -320,7 +321,7 @@ export async function bulkMoveCiphers(
 }
 
 export async function bulkArchiveCiphers(
-  db: D1Database,
+  db: ESADatabase,
   sqlChunkSize: SqlChunkSize,
   updateRevisionDate: UpdateRevisionDate,
   ids: string[],
@@ -351,7 +352,7 @@ export async function bulkArchiveCiphers(
 }
 
 export async function bulkUnarchiveCiphers(
-  db: D1Database,
+  db: ESADatabase,
   sqlChunkSize: SqlChunkSize,
   updateRevisionDate: UpdateRevisionDate,
   ids: string[],

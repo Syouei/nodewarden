@@ -1,4 +1,5 @@
 import { Env, Cipher, Folder, CipherType } from '../types';
+import type { ESADatabase, ESAPreparedStatement } from '../esa/types';
 import { notifyUserVaultSync } from '../durable/notifications-hub';
 import { StorageService } from '../services/storage';
 import { errorResponse, jsonResponse } from '../utils/response';
@@ -92,7 +93,7 @@ function readAliasedImportProp<T = unknown>(source: any, aliases: string[]): T |
   return undefined;
 }
 
-async function runBatchInChunks(db: D1Database, statements: D1PreparedStatement[], chunkSize: number): Promise<void> {
+async function runBatchInChunks(db: ESADatabase, statements: ESAPreparedStatement[], chunkSize: number): Promise<void> {
   for (let i = 0; i < statements.length; i += chunkSize) {
     const chunk = statements.slice(i, i + chunkSize);
     await db.batch(chunk);

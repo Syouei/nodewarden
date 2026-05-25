@@ -1,3 +1,5 @@
+import type { ESADatabase } from '../esa/types';
+
 // IMPORTANT:
 // This is the runtime D1 schema bootstrap. Keep it in sync with
 // migrations/0001_init.sql. Any new table/column/index must be added to both
@@ -121,7 +123,7 @@ const SCHEMA_STATEMENTS: readonly string[] = [
   'jti TEXT PRIMARY KEY, expires_at INTEGER NOT NULL)',
 ];
 
-async function executeSchemaStatement(db: D1Database, statement: string): Promise<void> {
+async function executeSchemaStatement(db: ESADatabase, statement: string): Promise<void> {
   try {
     await db.prepare(statement).run();
   } catch (error) {
@@ -133,7 +135,7 @@ async function executeSchemaStatement(db: D1Database, statement: string): Promis
   }
 }
 
-async function ensureAdminUserExists(db: D1Database): Promise<void> {
+async function ensureAdminUserExists(db: ESADatabase): Promise<void> {
   const admin = await db.prepare("SELECT id FROM users WHERE role = 'admin' LIMIT 1").first<{ id: string }>();
   if (admin?.id) return;
 
@@ -148,7 +150,7 @@ async function ensureAdminUserExists(db: D1Database): Promise<void> {
     .run();
 }
 
-export async function ensureStorageSchema(db: D1Database): Promise<void> {
+export async function ensureStorageSchema(db: ESADatabase): Promise<void> {
   await db.prepare('PRAGMA foreign_keys = ON').run();
   await db.prepare('CREATE TABLE IF NOT EXISTS config (key TEXT PRIMARY KEY, value TEXT NOT NULL)').run();
   for (const stmt of SCHEMA_STATEMENTS) {

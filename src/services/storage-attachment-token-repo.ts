@@ -1,6 +1,8 @@
+import type { ESADatabase } from '../esa/types';
+
 type ShouldRunPeriodicCleanup = (lastRunAt: number, intervalMs: number) => boolean;
 
-export async function ensureUsedAttachmentDownloadTokenTable(db: D1Database): Promise<void> {
+export async function ensureUsedAttachmentDownloadTokenTable(db: ESADatabase): Promise<void> {
   await db
     .prepare(
       'CREATE TABLE IF NOT EXISTS used_attachment_download_tokens (' +
@@ -12,7 +14,7 @@ export async function ensureUsedAttachmentDownloadTokenTable(db: D1Database): Pr
 }
 
 export async function consumeAttachmentDownloadToken(
-  db: D1Database,
+  db: ESADatabase,
   shouldRunPeriodicCleanup: ShouldRunPeriodicCleanup,
   lastCleanupAt: number,
   cleanupIntervalMs: number,

@@ -1,12 +1,13 @@
 import type { Attachment, Cipher } from '../types';
+import type { ESADatabase, ESAPreparedStatement } from '../esa/types';
 
-type SafeBind = (stmt: D1PreparedStatement, ...values: any[]) => D1PreparedStatement;
+type SafeBind = (stmt: ESAPreparedStatement, ...values: any[]) => ESAPreparedStatement;
 type SqlChunkSize = (fixedBindCount: number) => number;
 type GetCipher = (id: string) => Promise<Cipher | null>;
 type SaveCipher = (cipher: Cipher) => Promise<void>;
 type UpdateRevisionDate = (userId: string) => Promise<string>;
 
-export async function getAttachment(db: D1Database, id: string): Promise<Attachment | null> {
+export async function getAttachment(db: ESADatabase, id: string): Promise<Attachment | null> {
   const row = await db
     .prepare('SELECT id, cipher_id, file_name, size, size_name, key FROM attachments WHERE id = ?')
     .bind(id)
@@ -22,7 +23,7 @@ export async function getAttachment(db: D1Database, id: string): Promise<Attachm
   };
 }
 
-export async function saveAttachment(db: D1Database, safeBind: SafeBind, attachment: Attachment): Promise<void> {
+export async function saveAttachment(db: ESADatabase, safeBind: SafeBind, attachment: Attachment): Promise<void> {
   const stmt = db.prepare(
     'INSERT INTO attachments(id, cipher_id, file_name, size, size_name, key) VALUES(?, ?, ?, ?, ?, ?) ' +
     'ON CONFLICT(id) DO UPDATE SET cipher_id=excluded.cipher_id, file_name=excluded.file_name, size=excluded.size, size_name=excluded.size_name, key=excluded.key'
@@ -30,12 +31,12 @@ export async function saveAttachment(db: D1Database, safeBind: SafeBind, attachm
   await safeBind(stmt, attachment.id, attachment.cipherId, attachment.fileName, attachment.size, attachment.sizeName, attachment.key).run();
 }
 
-export async function deleteAttachment(db: D1Database, id: string): Promise<void> {
+export async function deleteAttachment(db: ESADatabase, id: string): Promise<void> {
   await db.prepare('DELETE FROM attachments WHERE id = ?').bind(id).run();
 }
 
 export async function bulkDeleteAttachmentsByIds(
-  db: D1Database,
+  db: ESADatabase,
   sqlChunkSize: SqlChunkSize,
   attachmentIds: string[]
 ): Promise<void> {
@@ -50,7 +51,7 @@ export async function bulkDeleteAttachmentsByIds(
   }
 }
 
-export async function getAttachmentsByCipher(db: D1Database, cipherId: string): Promise<Attachment[]> {
+export async function getAttachmentsByCipher(db: ESADatabase, cipherId: string): Promise<Attachment[]> {
   const res = await db
     .prepare('SELECT id, cipher_id, file_name, size, size_name, key FROM attachments WHERE cipher_id = ?')
     .bind(cipherId)
@@ -66,7 +67,7 @@ export async function getAttachmentsByCipher(db: D1Database, cipherId: string): 
 }
 
 export async function getAttachmentsByCipherIds(
-  db: D1Database,
+  db: ESADatabase,
   sqlChunkSize: SqlChunkSize,
   cipherIds: string[]
 ): Promise<Map<string, Attachment[]>> {
@@ -102,7 +103,7 @@ export async function getAttachmentsByCipherIds(
   return grouped;
 }
 
-export async function getAttachmentsByUserId(db: D1Database, userId: string): Promise<Map<string, Attachment[]>> {
+export async function getAttachmentsByUserId(db: ESADatabase, userId: string): Promise<Map<string, Attachment[]>> {
   const grouped = new Map<string, Attachment[]>();
   const res = await db
     .prepare(
@@ -131,11 +132,11 @@ export async function getAttachmentsByUserId(db: D1Database, userId: string): Pr
   return grouped;
 }
 
-export async function addAttachmentToCipher(db: D1Database, cipherId: string, attachmentId: string): Promise<void> {
+export async function addAttachmentToCipher(db: ESADatabase, cipherId: string, attachmentId: string): Promise<void> {
   await db.prepare('UPDATE attachments SET cipher_id = ? WHERE id = ?').bind(cipherId, attachmentId).run();
 }
 
-export async function deleteAllAttachmentsByCipher(db: D1Database, cipherId: string): Promise<void> {
+export async function deleteAllAttachmentsByCipher(db: ESADatabase, cipherId: string): Promise<void> {
   await db.prepare('DELETE FROM attachments WHERE cipher_id = ?').bind(cipherId).run();
 }
 

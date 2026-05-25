@@ -1,4 +1,4 @@
-import type { ESADatabase, ESABucket, ESAKVNamespace } from './esa/types';
+import type { ESADatabase, ESABucket, ESAKVNamespace } from '../esa/types';
 
 // Environment bindings
 export interface Env {

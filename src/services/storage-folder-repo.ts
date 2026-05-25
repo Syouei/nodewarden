@@ -1,4 +1,5 @@
 import type { Folder } from '../types';
+import type { ESADatabase } from '../esa/types';
 
 function mapFolderRow(row: any): Folder {
   return {
@@ -10,7 +11,7 @@ function mapFolderRow(row: any): Folder {
   };
 }
 
-export async function getFolder(db: D1Database, id: string): Promise<Folder | null> {
+export async function getFolder(db: ESADatabase, id: string): Promise<Folder | null> {
   const row = await db
     .prepare('SELECT id, user_id, name, created_at, updated_at FROM folders WHERE id = ?')
     .bind(id)
@@ -19,7 +20,7 @@ export async function getFolder(db: D1Database, id: string): Promise<Folder | nu
   return mapFolderRow(row);
 }
 
-export async function saveFolder(db: D1Database, folder: Folder): Promise<void> {
+export async function saveFolder(db: ESADatabase, folder: Folder): Promise<void> {
   await db
     .prepare(
       'INSERT INTO folders(id, user_id, name, created_at, updated_at) VALUES(?, ?, ?, ?, ?) ' +
@@ -29,12 +30,12 @@ export async function saveFolder(db: D1Database, folder: Folder): Promise<void> 
     .run();
 }
 
-export async function deleteFolder(db: D1Database, id: string, userId: string): Promise<void> {
+export async function deleteFolder(db: ESADatabase, id: string, userId: string): Promise<void> {
   await db.prepare('DELETE FROM folders WHERE id = ? AND user_id = ?').bind(id, userId).run();
 }
 
 export async function clearFolderFromCiphers(
-  db: D1Database,
+  db: ESADatabase,
   userId: string,
   folderId: string
 ): Promise<void> {
@@ -51,7 +52,7 @@ export async function clearFolderFromCiphers(
 }
 
 export async function bulkDeleteFolders(
-  db: D1Database,
+  db: ESADatabase,
   userId: string,
   ids: string[],
   sqlChunkSize: (fixedBindCount: number) => number,
@@ -85,7 +86,7 @@ export async function bulkDeleteFolders(
   return updateRevisionDate(userId);
 }
 
-export async function getAllFolders(db: D1Database, userId: string): Promise<Folder[]> {
+export async function getAllFolders(db: ESADatabase, userId: string): Promise<Folder[]> {
   const res = await db
     .prepare('SELECT id, user_id, name, created_at, updated_at FROM folders WHERE user_id = ? ORDER BY updated_at DESC')
     .bind(userId)
@@ -93,7 +94,7 @@ export async function getAllFolders(db: D1Database, userId: string): Promise<Fol
   return (res.results || []).map((row) => mapFolderRow(row));
 }
 
-export async function getFoldersPage(db: D1Database, userId: string, limit: number, offset: number): Promise<Folder[]> {
+export async function getFoldersPage(db: ESADatabase, userId: string, limit: number, offset: number): Promise<Folder[]> {
   const res = await db
     .prepare(
       'SELECT id, user_id, name, created_at, updated_at FROM folders WHERE user_id = ? ORDER BY updated_at DESC LIMIT ? OFFSET ?'

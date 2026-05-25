@@ -9,7 +9,7 @@
  * Schedule a background task to run asynchronously.
  * Errors are caught and logged but do not propagate.
  */
-export async function scheduleBackgroundTask(task: () => Promise<void>): void {
+export async function scheduleBackgroundTask(task: () => Promise<void>): Promise<void> {
   task().catch((err: unknown) => {
     console.error('Background task failed:', err);
   });

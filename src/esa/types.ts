@@ -13,6 +13,7 @@
 export interface ESADatabase {
   prepare(sql: string): ESAPreparedStatement;
   exec(sql: string): Promise<ESAResult>;
+  batch(statements: ESAPreparedStatement[]): Promise<ESAResult[]>;
 }
 
 export interface ESAPreparedStatement {
@@ -26,8 +27,11 @@ export interface ESAResult {
   success: boolean;
   error?: string;
   results?: any[];
-  changes?: number;
-  lastInsertRowid?: number | string;
+  meta: {
+    duration?: number;
+    changes?: number;
+    lastInsertRowid?: number | string;
+  };
 }
 
 // ---------------------------------------------------------------------------

@@ -1,5 +1,6 @@
 import { zipSync, unzipSync } from 'fflate';
 import type { Env } from '../types';
+import type { ESADatabase } from '../esa/types';
 import { APP_VERSION } from '../../shared/app-version';
 import { BACKUP_SETTINGS_CONFIG_KEY } from './backup-config';
 import { exportPortableBackupSettingsEnvelope } from './backup-settings-crypto';
@@ -99,7 +100,7 @@ export interface BackupArchiveBuildProgressEvent {
 
 export type BackupArchiveBuildProgressReporter = (event: BackupArchiveBuildProgressEvent) => Promise<void>;
 
-async function queryRows(db: D1Database, sql: string, ...values: unknown[]): Promise<SqlRow[]> {
+async function queryRows(db: ESADatabase, sql: string, ...values: unknown[]): Promise<SqlRow[]> {
   const result = await db.prepare(sql).bind(...values).all<SqlRow>();
   return (result.results || []).map((row) => ({ ...row }));
 }

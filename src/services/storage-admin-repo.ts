@@ -1,4 +1,5 @@
 import type { AuditLog, Invite } from '../types';
+import type { ESADatabase } from '../esa/types';
 
 export interface AuditLogListOptions {
   limit: number;
@@ -67,7 +68,7 @@ function buildAuditWhere(options: AuditLogListOptions): { where: string; params:
   };
 }
 
-export async function createInvite(db: D1Database, invite: Invite): Promise<void> {
+export async function createInvite(db: ESADatabase, invite: Invite): Promise<void> {
   await db
     .prepare(
       'INSERT INTO invites(code, created_by, used_by, expires_at, status, created_at, updated_at) VALUES(?, ?, ?, ?, ?, ?, ?)'
@@ -76,7 +77,7 @@ export async function createInvite(db: D1Database, invite: Invite): Promise<void
     .run();
 }
 
-export async function getInvite(db: D1Database, code: string): Promise<Invite | null> {
+export async function getInvite(db: ESADatabase, code: string): Promise<Invite | null> {
   const row = await db
     .prepare('SELECT code, created_by, used_by, expires_at, status, created_at, updated_at FROM invites WHERE code = ?')
     .bind(code)
@@ -93,7 +94,7 @@ export async function getInvite(db: D1Database, code: string): Promise<Invite | 
   };
 }
 
-export async function listInvites(db: D1Database, includeInactive: boolean = false): Promise<Invite[]> {
+export async function listInvites(db: ESADatabase, includeInactive: boolean = false): Promise<Invite[]> {
   const now = new Date().toISOString();
   const predicate = includeInactive
     ? '1 = 1'
@@ -116,7 +117,7 @@ export async function listInvites(db: D1Database, includeInactive: boolean = fal
   }));
 }
 
-export async function markInviteUsed(db: D1Database, code: string, userId: string): Promise<boolean> {
+export async function markInviteUsed(db: ESADatabase, code: string, userId: string): Promise<boolean> {
   const now = new Date().toISOString();
   const result = await db
     .prepare(
@@ -127,7 +128,7 @@ export async function markInviteUsed(db: D1Database, code: string, userId: strin
   return (result.meta.changes ?? 0) > 0;
 }
 
-export async function revokeInvite(db: D1Database, code: string): Promise<boolean> {
+export async function revokeInvite(db: ESADatabase, code: string): Promise<boolean> {
   const now = new Date().toISOString();
   const result = await db
     .prepare("UPDATE invites SET status = 'revoked', updated_at = ? WHERE code = ? AND status = 'active'")
@@ -136,12 +137,12 @@ export async function revokeInvite(db: D1Database, code: string): Promise<boolea
   return (result.meta.changes ?? 0) > 0;
 }
 
-export async function deleteAllInvites(db: D1Database): Promise<number> {
+export async function deleteAllInvites(db: ESADatabase): Promise<number> {
   const result = await db.prepare('DELETE FROM invites').run();
   return Number(result.meta.changes ?? 0);
 }
 
-export async function createAuditLog(db: D1Database, log: AuditLog): Promise<void> {
+export async function createAuditLog(db: ESADatabase, log: AuditLog): Promise<void> {
   await db
     .prepare(
       'INSERT INTO audit_logs(id, actor_user_id, action, category, level, target_type, target_id, metadata, created_at) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)'
@@ -150,7 +151,7 @@ export async function createAuditLog(db: D1Database, log: AuditLog): Promise<voi
     .run();
 }
 
-export async function pruneAuditLogs(db: D1Database, beforeIso: string): Promise<number> {
+export async function pruneAuditLogs(db: ESADatabase, beforeIso: string): Promise<number> {
   const result = await db
     .prepare('DELETE FROM audit_logs WHERE created_at < ?')
     .bind(beforeIso)
@@ -158,7 +159,7 @@ export async function pruneAuditLogs(db: D1Database, beforeIso: string): Promise
   return Number(result.meta.changes ?? 0);
 }
 
-export async function pruneAuditLogsToMax(db: D1Database, maxEntries: number): Promise<number> {
+export async function pruneAuditLogsToMax(db: ESADatabase, maxEntries: number): Promise<number> {
   const limit = Math.max(1, Math.floor(maxEntries));
   const result = await db
     .prepare(
@@ -171,12 +172,12 @@ export async function pruneAuditLogsToMax(db: D1Database, maxEntries: number): P
   return Number(result.meta.changes ?? 0);
 }
 
-export async function clearAuditLogs(db: D1Database): Promise<number> {
+export async function clearAuditLogs(db: ESADatabase): Promise<number> {
   const result = await db.prepare('DELETE FROM audit_logs').run();
   return Number(result.meta.changes ?? 0);
 }
 
-export async function listAuditLogs(db: D1Database, options: AuditLogListOptions): Promise<AuditLogListResult> {
+export async function listAuditLogs(db: ESADatabase, options: AuditLogListOptions): Promise<AuditLogListResult> {
   const limit = Math.max(1, Math.min(200, Math.floor(options.limit || 50)));
   const offset = Math.max(0, Math.floor(options.offset || 0));
   const { where, params } = buildAuditWhere(options);

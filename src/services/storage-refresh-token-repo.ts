@@ -1,10 +1,11 @@
 import type { RefreshTokenRecord } from '../types';
+import type { ESADatabase } from '../esa/types';
 
 type RefreshTokenKeyFn = (token: string) => Promise<string>;
 type CleanupExpiredFn = (nowMs: number) => Promise<void>;
 
 export async function saveRefreshToken(
-  db: D1Database,
+  db: ESADatabase,
   refreshTokenKey: RefreshTokenKeyFn,
   maybeCleanupExpiredRefreshTokens: CleanupExpiredFn,
   token: string,
@@ -25,7 +26,7 @@ export async function saveRefreshToken(
 }
 
 export async function getRefreshTokenRecord(
-  db: D1Database,
+  db: ESADatabase,
   refreshTokenKey: RefreshTokenKeyFn,
   maybeCleanupExpiredRefreshTokens: CleanupExpiredFn,
   deleteRefreshTokenRecord: (token: string) => Promise<void>,
@@ -53,18 +54,18 @@ export async function getRefreshTokenRecord(
   };
 }
 
-export async function deleteRefreshToken(db: D1Database, refreshTokenKey: RefreshTokenKeyFn, token: string): Promise<void> {
+export async function deleteRefreshToken(db: ESADatabase, refreshTokenKey: RefreshTokenKeyFn, token: string): Promise<void> {
   const tokenKey = await refreshTokenKey(token);
   await db.prepare('DELETE FROM refresh_tokens WHERE token = ?').bind(token).run();
   await db.prepare('DELETE FROM refresh_tokens WHERE token = ?').bind(tokenKey).run();
 }
 
-export async function deleteRefreshTokensByUserId(db: D1Database, userId: string): Promise<number> {
+export async function deleteRefreshTokensByUserId(db: ESADatabase, userId: string): Promise<number> {
   const result = await db.prepare('DELETE FROM refresh_tokens WHERE user_id = ?').bind(userId).run();
   return Number(result.meta.changes ?? 0);
 }
 
-export async function deleteRefreshTokensByDevice(db: D1Database, userId: string, deviceIdentifier: string): Promise<number> {
+export async function deleteRefreshTokensByDevice(db: ESADatabase, userId: string, deviceIdentifier: string): Promise<number> {
   const result = await db
     .prepare('DELETE FROM refresh_tokens WHERE user_id = ? AND device_identifier = ?')
     .bind(userId, deviceIdentifier)
@@ -73,7 +74,7 @@ export async function deleteRefreshTokensByDevice(db: D1Database, userId: string
 }
 
 export async function constrainRefreshTokenExpiry(
-  db: D1Database,
+  db: ESADatabase,
   refreshTokenKey: RefreshTokenKeyFn,
   token: string,
   maxExpiresAtMs: number
