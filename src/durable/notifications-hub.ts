@@ -234,6 +234,7 @@ export class NotificationsHub {
 
     // For ESA, we broadcast via Redis pub/sub or direct session tracking
     // The actual WebSocket broadcast would be handled by a connected client or separate process
+    console.log('[ESA] Notification received but not broadcast (WebSocket not fully implemented)');
     return new Response(null, { status: 204 });
   }
 
@@ -306,8 +307,8 @@ export class NotificationsHub {
           (ws as any).protocol = protocol;
           ws.send(SIGNALR_HANDSHAKE_ACK);
           return;
-        } catch {
-          // Ignore malformed pre-handshake payloads.
+        } catch (error) {
+          console.warn('Malformed pre-handshake payload:', error);
         }
       }
       return;
@@ -331,6 +332,7 @@ export class NotificationsHub {
     if (handshakeComplete) {
       await this.notificationsService.removeConnection(sessionId);
     }
+    wsSessionMap.delete(ws);
   }
 
   async webSocketError(ws: WebSocket, error: unknown): Promise<void> {
