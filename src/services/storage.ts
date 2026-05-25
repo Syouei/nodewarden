@@ -1,4 +1,5 @@
 import { User, Cipher, Folder, Attachment, Device, Invite, AuditLog, Send, TrustedDeviceTokenSummary, RefreshTokenRecord, CustomEquivalentDomain } from '../types';
+import type { ESADatabase } from '../esa/types';
 import { LIMITS } from '../config/limits';
 import { ensureStorageSchema } from './storage-schema';
 import {
@@ -141,7 +142,7 @@ export class StorageService {
   private static readonly ATTACHMENT_TOKEN_CLEANUP_INTERVAL_MS = LIMITS.cleanup.attachmentTokenCleanupIntervalMs;
   private static readonly PERIODIC_CLEANUP_PROBABILITY = LIMITS.cleanup.cleanupProbability;
 
-  constructor(private db: D1Database) {}
+  constructor(private db: ESADatabase) {}
 
   /**
    * D1 .bind() throws on `undefined` values. This helper converts every
