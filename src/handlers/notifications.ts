@@ -2,6 +2,8 @@ import { AuthService } from '../services/auth';
 import type { Env, JWTPayload } from '../types';
 import { errorResponse, jsonResponse } from '../utils/response';
 import { generateUUID } from '../utils/uuid';
+import { NotificationsHub } from '../durable/notifications-hub';
+import { ESANotificationsService } from '../esa/services/notifications';
 
 function extractAccessToken(request: Request): string | null {
   const url = new URL(request.url);
@@ -47,12 +49,21 @@ export async function handleNotificationsHub(request: Request, env: Env): Promis
   }
 
   const userId = payload.sub;
-  const id = env.NOTIFICATIONS_HUB.idFromName(userId);
-  const stub = env.NOTIFICATIONS_HUB.get(id);
+  const notificationsService = new ESANotificationsService(env.NOTIFICATIONS_HUB!);
+  const hub = new NotificationsHub(env, notificationsService);
+
+  // Reconstruct URL with userId/deviceId params that handleWebSocket expects
   const forwardedUrl = new URL(request.url);
   forwardedUrl.searchParams.set('nw_uid', userId);
   if (payload.did) {
     forwardedUrl.searchParams.set('nw_did', payload.did);
   }
-  return stub.fetch(new Request(forwardedUrl.toString(), request));
+
+  // Create a new request with the modified URL (keep original headers/method)
+  const forwardedRequest = new Request(forwardedUrl.toString(), {
+    method: request.method,
+    headers: request.headers,
+  });
+
+  return hub.fetch(forwardedRequest);
 }

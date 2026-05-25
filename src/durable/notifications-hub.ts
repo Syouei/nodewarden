@@ -1,5 +1,6 @@
 import type { Env } from '../types';
 import { ESANotificationsService } from '../esa/services/notifications';
+import { WebSocket } from 'ws';
 
 const SIGNALR_RECORD_SEPARATOR = 0x1e;
 const SIGNALR_HANDSHAKE_ACK = new Uint8Array([0x7b, 0x7d, SIGNALR_RECORD_SEPARATOR]);
@@ -168,6 +169,15 @@ function buildSignalRMessagePackInvocation(
   return frameSignalRBinary(encodedPayload);
 }
 
+// Module-level Map to store WebSocket session metadata (replaces Cloudflare DO attachment)
+const wsSessionMap = new Map<WebSocket, {
+  sessionId: string;
+  userId: string;
+  deviceIdentifier: string | null;
+  handshakeComplete: boolean;
+  protocol: 'json' | 'messagepack';
+}>();
+
 /**
  * Stateless NotificationsHub for ESA
  * Handles HTTP endpoints for notifications without Durable Object dependency.
@@ -253,21 +263,27 @@ export class NotificationsHub {
     // Register the connection in Redis
     const sessionId = await this.notificationsService.addConnection(requestUserId, requestDeviceIdentifier);
 
-    const pair = new WebSocketPair();
-    const client = pair[0];
-    const server = pair[1];
+    // Create a mock/placeholder WebSocket for ESA that will be replaced
+    // with actual WebSocket handling once ESA WebSocket API is confirmed.
+    // In Cloudflare this uses WebSocketPair, but for ESA we use a different mechanism.
+    // TODO(ESA): Replace with actual ESA WebSocket handling when API is confirmed.
+    // The typical pattern is: return new Response(null, { status: 101, webSocket: ws })
+    const mockWs = new WebSocket(null as any);
+    wsSessionMap.set(mockWs, {
+      sessionId,
+      userId: requestUserId,
+      deviceIdentifier: requestDeviceIdentifier,
+      handshakeComplete: false,
+      protocol: 'messagepack',
+    });
 
-    // Store sessionId in the WebSocket's attachment for later reference
-    (server as any).sessionId = sessionId;
-    (server as any).userId = requestUserId;
-    (server as any).handshakeComplete = false;
-    (server as any).protocol = 'messagepack';
-    (server as any).deviceIdentifier = requestDeviceIdentifier;
-
+    // Return 101 Switching Protocols with a placeholder WebSocket
+    // In Cloudflare Workers, this would be: new Response(null, { status: 101, webSocket: client })
+    // For ESA, the exact mechanism is TBD pending API confirmation
     return new Response(null, {
       status: 101,
-      webSocket: client,
-    });
+      webSocket: mockWs,
+    } as ResponseInit & { webSocket?: WebSocket });
   }
 
   async webSocketMessage(ws: WebSocket, message: string | ArrayBuffer | ArrayBufferView): Promise<void> {
