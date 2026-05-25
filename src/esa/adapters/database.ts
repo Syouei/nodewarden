@@ -60,7 +60,6 @@ export class D1LikePreparedStatement {
     if (values.length > 0) {
       this.bind(...values);
     }
-    const stmt = this.db.prepare(this.sql);
     // ESA prepare returns a new statement, so we need to rebind
     const esaStmt = this.db.prepare(this.sql);
     const bound = esaStmt.bind(...this.boundValues);
@@ -74,7 +73,6 @@ export class D1LikePreparedStatement {
     if (values.length > 0) {
       this.bind(...values);
     }
-    const stmt = this.db.prepare(this.sql);
     const esaStmt = this.db.prepare(this.sql);
     const bound = esaStmt.bind(...this.boundValues);
     return bound.all();

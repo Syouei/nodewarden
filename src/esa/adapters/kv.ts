@@ -33,8 +33,16 @@ export class KVLikeNamespace {
    * to match the D1 metadata pattern used elsewhere in the codebase.
    */
   async put(key: string, value: string, options?: KVPutOptions): Promise<void> {
-    if (options?.metadata !== undefined) {
-      // Serialize value + metadata as JSON to match D1 metadata pattern
+    // For non-string values (e.g., ArrayBuffer), store directly with metadata
+    // Don't use JSON envelope as it can't properly serialize binary data
+    if (typeof value !== 'string' && options?.metadata !== undefined) {
+      return this.kv.put(key, value, {
+        metadata: options.metadata,
+        expirationTtlSeconds: options.expirationTtlSeconds,
+      });
+    }
+    // For string values with metadata, use JSON envelope for backward compatibility
+    if (typeof value === 'string' && options?.metadata !== undefined) {
       const serialized = JSON.stringify({ v: value, m: options.metadata });
       return this.kv.put(key, serialized, {
         expirationTtlSeconds: options.expirationTtlSeconds,
@@ -83,7 +91,13 @@ export class KVLikeNamespace {
       return { value: null, metadata: null };
     }
 
-    // Check if this was stored with metadata (JSON envelope)
+    // For arrayBuffer type, return raw value without JSON parsing
+    // Metadata is stored separately in Redis metadata
+    if (type === 'arrayBuffer') {
+      return { value: result.value, metadata: result.metadata };
+    }
+
+    // Check if this was stored with metadata (JSON envelope) for string type
     if (type === 'string' && typeof result.value === 'string') {
       try {
         const parsed = JSON.parse(result.value);

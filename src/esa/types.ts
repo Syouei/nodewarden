@@ -55,8 +55,13 @@ export interface ESABlobObject {
 // KV Storage (Redis) Types
 // ---------------------------------------------------------------------------
 
+export interface ESAKVOptions {
+  metadata?: any;
+  expirationTtlSeconds?: number;
+}
+
 export interface ESAKVNamespace {
-  put(key: string, value: string, options?: { metadata?: any; expirationTtlSeconds?: number }): Promise<void>;
+  put(key: string, value: string, options?: ESAKVOptions): Promise<void>;
   get(key: string, options?: { type?: 'string' | 'arrayBuffer' | 'json' }): Promise<any>;
   getWithMetadata<T = any>(key: string, type?: 'string' | 'arrayBuffer' | 'json'): Promise<{ value: any; metadata: T | null }>;
   delete(key: string): Promise<void>;
