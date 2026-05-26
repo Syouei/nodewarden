@@ -1,4 +1,5 @@
 import { Env } from '../types';
+import { ESABucket, ESAKVNamespace } from '../esa/types';
 
 const DEFAULT_CONTENT_TYPE = 'application/octet-stream';
 export const KV_MAX_OBJECT_BYTES = 25 * 1024 * 1024;
@@ -21,11 +22,11 @@ export interface PutBlobOptions {
   customMetadata?: Record<string, string>;
 }
 
-function hasR2Storage(env: Env): env is Env & { ATTACHMENTS: R2Bucket } {
+function hasR2Storage(env: Env): env is Env & { ATTACHMENTS: ESABucket } {
   return !!env.ATTACHMENTS;
 }
 
-function hasKvStorage(env: Env): env is Env & { ATTACHMENTS_KV: KVNamespace } {
+function hasKvStorage(env: Env): env is Env & { ATTACHMENTS_KV: ESAKVNamespace } {
   return !!env.ATTACHMENTS_KV;
 }
 
