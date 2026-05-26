@@ -3,7 +3,7 @@ import { LIMITS } from '../config/limits';
 
 // Rate limiting service.
 // - Login attempts: D1-backed (low volume, security-critical, needs cross-colo persistence).
-// - API budgets: Cloudflare Cache API (high volume, auto-expires, zero D1 writes).
+// - API budgets: D1-backed (SQLite, cross-colo consistency, periodic cleanup).
 
 const CONFIG = {
   LOGIN_MAX_ATTEMPTS: LIMITS.rateLimit.loginMaxAttempts,
@@ -13,6 +13,7 @@ const CONFIG = {
 
 export class RateLimitService {
   private static loginIpTableReady = false;
+  private static rateLimitTableReady = false;
   private static lastLoginIpCleanupAt = 0;
 
   private static readonly PERIODIC_CLEANUP_PROBABILITY = LIMITS.rateLimit.cleanupProbability;
@@ -57,6 +58,23 @@ export class RateLimitService {
       .run();
 
     RateLimitService.loginIpTableReady = true;
+  }
+
+  private async ensureRateLimitTable(): Promise<void> {
+    if (RateLimitService.rateLimitTableReady) return;
+
+    await this.db
+      .prepare(
+        'CREATE TABLE IF NOT EXISTS rate_limit_budget (' +
+        'identifier TEXT NOT NULL, ' +
+        'window_start INTEGER NOT NULL, ' +
+        'count INTEGER NOT NULL, ' +
+        'PRIMARY KEY (identifier, window_start)' +
+        ')'
+      )
+      .run();
+
+    RateLimitService.rateLimitTableReady = true;
   }
 
   async checkLoginAttempt(ip: string): Promise<{
@@ -138,41 +156,40 @@ export class RateLimitService {
     await this.db.prepare('DELETE FROM login_attempts_ip WHERE ip = ?').bind(key).run();
   }
 
-  // Cache API-backed fixed-window rate limiter.
-  // Uses Cloudflare edge cache instead of D1 — zero database writes, auto-expires via TTL.
-  // Per-colo isolation is acceptable (matches Cloudflare's own rate limiting behaviour).
+  // SQLite-backed fixed-window rate limiter.
+  // Uses D1 for consistency across colo instances.
   private async consumeFixedWindowBudget(
     identifier: string,
     maxRequests: number,
     windowSeconds: number
   ): Promise<{ allowed: boolean; remaining: number; retryAfterSeconds?: number }> {
+    await this.ensureRateLimitTable();
+
     const nowSec = Math.floor(Date.now() / 1000);
     const windowStart = nowSec - (nowSec % windowSeconds);
     const windowEnd = windowStart + windowSeconds;
-    const ttl = Math.max(1, windowEnd - nowSec);
 
-    const cache = await caches.open('rate-limit');
-    const cacheKey = new Request(`https://rl/${identifier}/${windowStart}`);
+    const row = await this.db
+      .prepare('SELECT count FROM rate_limit_budget WHERE identifier = ? AND window_start = ?')
+      .bind(identifier, windowStart)
+      .first<{ count: number }>();
 
-    const cached = await cache.match(cacheKey);
-    let count = 0;
-    if (cached) {
-      count = parseInt(await cached.text(), 10) || 0;
-    }
+    const count = row?.count || 0;
 
     if (count >= maxRequests) {
-      return { allowed: false, remaining: 0, retryAfterSeconds: ttl };
+      return { allowed: false, remaining: 0, retryAfterSeconds: windowEnd - nowSec };
     }
 
-    count++;
-    await cache.put(
-      cacheKey,
-      new Response(String(count), {
-        headers: { 'Cache-Control': `public, max-age=${ttl}` },
-      })
-    );
+    // Atomic upsert: insert or increment.
+    await this.db
+      .prepare(
+        'INSERT INTO rate_limit_budget(identifier, window_start, count) VALUES(?, ?, 1) ' +
+        'ON CONFLICT(identifier, window_start) DO UPDATE SET count = count + 1'
+      )
+      .bind(identifier, windowStart)
+      .run();
 
-    return { allowed: true, remaining: Math.max(0, maxRequests - count) };
+    return { allowed: true, remaining: Math.max(0, maxRequests - count - 1) };
   }
 
   // General-purpose fixed-window budget.
