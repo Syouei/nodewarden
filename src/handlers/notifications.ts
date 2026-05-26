@@ -49,7 +49,10 @@ export async function handleNotificationsHub(request: Request, env: Env): Promis
   }
 
   const userId = payload.sub;
-  const notificationsService = new ESANotificationsService(env.NOTIFICATIONS_HUB!);
+  if (!env.NOTIFICATIONS_HUB) {
+    return errorResponse('NOTIFICATIONS_HUB is not configured', 503);
+  }
+  const notificationsService = new ESANotificationsService(env.NOTIFICATIONS_HUB);
   const hub = new NotificationsHub(env, notificationsService);
 
   // Reconstruct URL with userId/deviceId params that handleWebSocket expects
