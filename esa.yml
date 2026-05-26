@@ -42,10 +42,8 @@ functions:
         binding: DB
         type: sqlite
 
-    # Durable Objects binding
-    durableObjects:
-      - name: NOTIFICATIONS_HUB
-        className: NotificationsHub
+    # WebSocket support: Handled via Redis pub/sub + HTTP trigger (NOT Durable Objects)
+    # The NOTIFICATIONS_HUB is Redis-backed via kv section below
 
     # Object storage binding (ESA OSS equivalent to R2)
     oss:
